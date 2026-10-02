@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+.env
+*.log
+# Angular build outputs copied in by CI before `docker build`
+apps/*
+!apps/.gitkeep

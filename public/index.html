@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web1 App Server</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Web1 App Server</h1>
+
+      <section id="signed-out" hidden>
+        <a id="login" class="button" href="/api/auth/login">Sign in with Microsoft</a>
+      </section>
+
+      <section id="profile" hidden>
+        <p>Signed in as <strong id="profile-name"></strong> (<span id="profile-email"></span>)</p>
+        <button id="logout" type="button">Sign out</button>
+      </section>
+
+      <p id="message" role="status"></p>
+    </main>
+  </body>
+</html>

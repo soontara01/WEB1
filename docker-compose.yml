@@ -1,0 +1,54 @@
+# Local scaling demo: 2 app replicas behind nginx round-robin (no sticky sessions), sharing one MongoDB.
+#   SESSION_SECRETS=... OIDC_ISSUER=... OIDC_CLIENT_ID=... OIDC_CLIENT_SECRET=... docker compose up --build
+#   → http://localhost:8080 (register http://localhost:8080/api/auth/callback in Entra)
+#
+# Runs with NODE_ENV=development because it serves plain HTTP; production requires HTTPS
+# (NODE_ENV=production forces Secure cookies). Terminate TLS at your load balancer in production.
+services:
+  mongo:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017" # to inspect sessions from the host
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    deploy:
+      replicas: 2
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: app
+      SESSION_SECRETS: ${SESSION_SECRETS:?set SESSION_SECRETS (>= 32 chars) in your shell or .env}
+      TRUST_PROXY: "1"
+      LOG_LEVEL: info
+      SHUTDOWN_DELAY_MS: "5000"
+      PUBLIC_BASE_URL: http://localhost:8080
+      OIDC_ISSUER: ${OIDC_ISSUER:?set OIDC_ISSUER (https://login.microsoftonline.com/<tenant-id>/v2.0)}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?set OIDC_CLIENT_ID}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?set OIDC_CLIENT_SECRET}
+      # Angular builds are baked into the image from ./apps/<name>/browser (see Dockerfile).
+      # Separate variable from SPA_APPS because .env holds host paths for `npm run dev`, e.g.
+      #   COMPOSE_SPA_APPS=inventory:/app/apps/inventory/browser,sale:/app/apps/sale/browser
+      SPA_APPS: ${COMPOSE_SPA_APPS:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
+volumes:
+  mongo-data:
